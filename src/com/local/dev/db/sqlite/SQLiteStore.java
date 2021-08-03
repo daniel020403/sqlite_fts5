@@ -2,10 +2,14 @@ package com.local.dev.db.sqlite;
 
 import java.io.File;
 import java.sql.*;
+import java.util.HashMap;
 
 public class SQLiteStore {
     private File file;
     private String connectionString;
+//    private String message1000b     = "message_1k_bytes.txt";
+//    private String message2000b     = "message_2k_bytes.txt";
+//    private String message500kb     = "message_5k_bytes.txt";
 
     public SQLiteStore(File file) {
         this.file               = file;
@@ -32,13 +36,8 @@ public class SQLiteStore {
                 ResultSet resultSet = statement.executeQuery(sql);
                 Integer count       = 0;
 
-                while (resultSet.next()) {
-                    count = resultSet.getInt("cnt");
-                }
-
-                if (count > 0) {
-                    return true;
-                }
+                while (resultSet.next()) { count = resultSet.getInt("cnt"); }
+                if (count > 0) { return true; }
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -65,11 +64,11 @@ public class SQLiteStore {
                 String sql = "";
                 Statement statement = conn.createStatement();
 
-                sql                 = "CREATE VIRTUAL TABLE " + table + " USING FTS5(sender, recipient, message, content=" + persistentTable + ", content_rowid=id);";
+                sql                 = "CREATE VIRTUAL TABLE " + table + " USING FTS5(mail_from, mail_to, mail_content, content=" + persistentTable + ", content_rowid=id);";
                 statement.execute(sql);
 
                 sql                 = "CREATE TRIGGER " + persistentTable +"_ai AFTER INSERT ON " + persistentTable +" BEGIN\n" +
-                                    "    INSERT INTO " + table + "(rowid, sender, recipient, message) VALUES(new.id, new.sender, new.recipient, new.message);\n" +
+                                    "    INSERT INTO " + table + "(rowid, mail_from, mail_to, mail_content) VALUES(new.id, new.mail_from, new.mail_to, new.mail_content);\n" +
                                     "END;";
                 statement.execute(sql);
             }
@@ -78,35 +77,21 @@ public class SQLiteStore {
         }
     }
 
-    public void insertData(String table, String ftsTable, Integer suffix) {
+    public void insertData(String table, HashMap<String, String> email) {
         try (Connection conn = DriverManager.getConnection(this.connectionString)) {
             if (conn != null) {
-                String sql          = "";
-                Statement statement = conn.createStatement();
+                String sql = "INSERT INTO " + table + "(backup_in_job, parent_id, name, backup_by_job, mail_from, mail_to, mail_content) " +
+                                "VALUES(20210630154250, 1, '$JOB_ATTRIBUTES', 20210630154250, ?, ?, ?);";
 
-                sql                 = "INSERT INTO " + table + "(sender, recipient, message) VALUES('user" + suffix + "@email.com', 'user" + (suffix + 1) + "@email.com', 'Example message " + suffix + ".');";
-                statement.execute(sql);
+                PreparedStatement pstatement = conn.prepareStatement(sql);
+                pstatement.setString(1, email.get("mail_from"));
+                pstatement.setString(2, email.get("mail_to"));
+                pstatement.setString(3, email.get("mail_content"));
+                pstatement.executeUpdate();
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-    }
-
-    public ResultSet queryTable(String table) {
-        try (Connection conn = DriverManager.getConnection(this.connectionString)) {
-            if (conn != null) {
-                System.out.println("Database connection established!");
-                String sql          = "SELECT * FROM " + table + ";";
-                Statement statement = conn.createStatement();
-                ResultSet resultSet = statement.executeQuery(sql);
-
-                return resultSet;
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return null;
     }
 
     public void queryFTSTable(String table) {
@@ -118,9 +103,9 @@ public class SQLiteStore {
                 ResultSet resultSet = statement.executeQuery(sql);
 
                 while (resultSet.next()) {
-                    System.out.println(resultSet.getString("sender") + " - " +
-                            resultSet.getString("recipient") + " - " +
-                            resultSet.getString("message"));
+                    System.out.println(resultSet.getString("mail_from") + " - " +
+                            resultSet.getString("mail_to") + " - " +
+                            resultSet.getString("mail_content"));
                 }
             }
         } catch (SQLException e) {

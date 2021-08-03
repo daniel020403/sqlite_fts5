@@ -1,53 +1,91 @@
 package com.local.dev.db.sqlite;
 
+import sun.rmi.server.InactiveGroupException;
+
 import java.io.File;
-import java.sql.ResultSet;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.SQLException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
 
 public class SQLiteFTSTest {
+    private static String sqliteDb                          = "index.db";
+    private static String ftsTable                          = "ftsMail";
+    private static String persistentTable                   = "file";
+    private static List<String> dictionary                  = new ArrayList<String>();
+    private static HashMap<String, Duration> timedEvents    = new HashMap<String, Duration>();
 
     public static void main(String[] args) {
-        String sqliteDb = "index.db";
-//        backupSession(sqliteDb);
+        Instant start = Instant.now();
+
+        dictionary = readDictionary();
+        backupSession(sqliteDb);
         restoreSession(sqliteDb);
+
+        Instant end = Instant.now();
+        timedEvents.put("main", Duration.between(start, end));
+
+        printTimedEvents();
     }
 
     private static void backupSession(String db) {
+        Instant start = Instant.now();
+
         try {
             System.out.println("\nSimulating backup session!\n");
             createSQLiteDB(db);
             createTable(db);
             createFTSTable(db);
-            insertTestData(db, 10);
-            queryFTSTable(db);
+            insertTestData(db, 1000, 1000);
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        Instant end = Instant.now();
+        timedEvents.put("backupSession", Duration.between(start, end));
     }
 
     private static void restoreSession(String db) {
+        Instant start = Instant.now();
+
         try {
             System.out.println("\n\n\nSimulating restore session!\n");
-//            createFTSTable(db);
             queryFTSTable(db);
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        Instant end = Instant.now();
+        timedEvents.put("restoreSession", Duration.between(start, end));
     }
 
     private static void createSQLiteDB(String db) throws SQLException {
-        File file = new File((db));
+        Instant start = Instant.now();
+
+        File file = new File(db);
         if (!file.exists() && !file.isDirectory()) {
             SQLiteStore sqliteStore = new SQLiteStore(new File(db));
             sqliteStore.createSQLiteDB();
+            System.out.println("SQLite database created: " + file.toString());
         } else {
             System.out.println("SQLite database is already existing: " + file.toString());
         }
+
+        Instant end = Instant.now();
+        timedEvents.put("createSQLiteDB", Duration.between(start, end));
     }
 
     private static void createTable(String db) {
+        Instant start           = Instant.now();
         SQLiteStore sqLiteStore = new SQLiteStore(new File(db));
-        String persistentTable  = "pTable";
 
         if (sqLiteStore.tableExist(persistentTable)) {
             System.out.println("Table " + persistentTable + " already exists!");
@@ -55,12 +93,14 @@ public class SQLiteFTSTest {
             sqLiteStore.createTable(persistentTable);
             System.out.println("Table " + persistentTable + " successfully created!");
         }
+
+        Instant end = Instant.now();
+        timedEvents.put("createTable", Duration.between(start, end));
     }
 
     private static void createFTSTable(String db) {
+        Instant start           = Instant.now();
         SQLiteStore sqLiteStore = new SQLiteStore(new File(db));
-        String ftsTable         = "fTable";
-        String persistentTable  = "pTable";
 
         if (sqLiteStore.tableExist(ftsTable)) {
             System.out.println("FTS table " + ftsTable + " already exists!");
@@ -68,39 +108,76 @@ public class SQLiteFTSTest {
             sqLiteStore.createFTSTable(ftsTable, persistentTable);
             System.out.println("FTS table " + ftsTable + " successfully created!");
         }
+
+        Instant end = Instant.now();
+        timedEvents.put("createFTSTable", Duration.between(start, end));
     }
 
-    private static void insertTestData(String db, Integer dataCount) {
-        SQLiteStore sqLiteStore = new SQLiteStore(new File(db));
-        String table            = "pTable";
-        String ftsTable         = "fTable";
+    private static void insertTestData(String db, Integer dataCount, int contentSizeInBytes) {
+        Instant start                   = Instant.now();
+        SQLiteStore sqLiteStore         = new SQLiteStore(new File(db));
+        List<String> sentences          = generateSentenceList(dataCount, contentSizeInBytes);
 
+        HashMap<String, String> email   = new HashMap<String, String>();
         for (int i = 0; i < dataCount; i++) {
-            sqLiteStore.insertData(table, ftsTable, i);
-        }
+            email.put("mail_from", String.format("user%d@email.com", i));
+            email.put("mail_to", String.format("user%d@email.com", i + 1));
+            email.put("mail_content", sentences.get(i));
+            sqLiteStore.insertData(persistentTable, email);
 
+            email.clear();
+        }
         System.out.println("Successfully inserted " + dataCount + " test data!");
-    }
 
-    private static void queryTable(String db) throws SQLException {
-        SQLiteStore sqLiteStore = new SQLiteStore(new File(db));
-        String table            = "pTable";
-
-        System.out.println("Querying table " + table + " ...");
-        ResultSet resultSet     = sqLiteStore.queryTable(table);
-        while (resultSet.next()) {
-            System.out.println(resultSet.getString("sender") + " - " +
-                    resultSet.getString("recipient") + " - " +
-                    resultSet.getString("message"));
-        }
+        Instant end = Instant.now();
+        timedEvents.put("insertTestData", Duration.between(start, end));
     }
 
     private static void queryFTSTable(String db) throws SQLException {
+        Instant start           = Instant.now();
         SQLiteStore sqLiteStore = new SQLiteStore(new File(db));
-        String ftsTable         = "fTable";
 
         System.out.println("Querying FTS table " + ftsTable + " ...");
         sqLiteStore.queryFTSTable(ftsTable);
+
+        Instant end = Instant.now();
+        timedEvents.put("queryFTSTable", Duration.between(start, end));
+    }
+
+    private static List<String> readDictionary() {
+        System.out.println("Reading dictionary file ...");
+
+        Instant start       = Instant.now();
+        List<String> lines  = new ArrayList<String>();
+
+        try (Stream<String> stream = Files.lines(Paths.get("dictionary.txt"), StandardCharsets.UTF_8)) {
+            stream.forEach(string -> lines.add(string));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Instant end = Instant.now();
+        timedEvents.put("readDictionary", Duration.between(start, end));
+
+        return lines;
+    }
+
+    private static List<String> generateSentenceList(int dataCount, int contentSizeInBytes) {
+        System.out.println("Generating sentences for mail content ...");
+
+        Instant start                   = Instant.now();
+        SentenceGenerator generator     = new SentenceGenerator(dictionary);
+        Instant end                     = Instant.now();
+        timedEvents.put("generateSentenceList", Duration.between(start, end));
+
+        return generator.generateSentenceList(dataCount, contentSizeInBytes);
+    }
+
+    private static void printTimedEvents() {
+        System.out.println("\n\n----- Summary of Timed Events (milliseconds) -----\n");
+        for (Map.Entry<String, Duration> set : timedEvents.entrySet()) {
+            System.out.println(set.getKey() + ": " + set.getValue().toMillis());
+        }
     }
 
 }
