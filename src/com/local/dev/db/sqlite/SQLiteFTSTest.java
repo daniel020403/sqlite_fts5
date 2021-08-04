@@ -167,10 +167,11 @@ public class SQLiteFTSTest {
 
         Instant start                   = Instant.now();
         SentenceGenerator generator     = new SentenceGenerator(dictionary);
+        List<String> list               = generator.generateSentenceList(dataCount, contentSizeInBytes);
         Instant end                     = Instant.now();
         timedEvents.put("generateSentenceList", Duration.between(start, end));
 
-        return generator.generateSentenceList(dataCount, contentSizeInBytes);
+        return list;
     }
 
     private static void printTimedEvents() {
