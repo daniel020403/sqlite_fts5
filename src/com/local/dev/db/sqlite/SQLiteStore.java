@@ -66,11 +66,6 @@ public class SQLiteStore {
 
                 sql                 = "CREATE VIRTUAL TABLE " + table + " USING FTS5(mail_from, mail_to, mail_content, content=" + persistentTable + ", content_rowid=id);";
                 statement.execute(sql);
-
-                sql                 = "CREATE TRIGGER " + persistentTable +"_ai AFTER INSERT ON " + persistentTable +" BEGIN\n" +
-                                    "    INSERT INTO " + table + "(rowid, mail_from, mail_to, mail_content) VALUES(new.id, new.mail_from, new.mail_to, new.mail_content);\n" +
-                                    "END;";
-                statement.execute(sql);
             }
         } catch (SQLException e) {
             e.printStackTrace();
