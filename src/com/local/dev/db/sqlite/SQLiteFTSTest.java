@@ -22,6 +22,7 @@ public class SQLiteFTSTest {
     private static String persistentTable                   = "file";
     private static List<String> dictionary                  = new ArrayList<String>();
     private static HashMap<String, Duration> timedEvents    = new HashMap<String, Duration>();
+    private static String message500KB                      = "message_5k_bytes.txt";
 
     public static void main(String[] args) {
         Instant start = Instant.now();
@@ -44,7 +45,7 @@ public class SQLiteFTSTest {
             createSQLiteDB(db);
             createTable(db);
             createFTSTable(db);
-            insertTestData(db, 1000000, 1000);
+            insertTestData(db, 50000, 500000);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -116,13 +117,26 @@ public class SQLiteFTSTest {
     private static void insertTestData(String db, Integer dataCount, int contentSizeInBytes) {
         Instant start                   = Instant.now();
         SQLiteStore sqLiteStore         = new SQLiteStore(new File(db));
-        List<String> sentences          = generateSentenceList(dataCount, contentSizeInBytes);
+        List<String> sentences          = new ArrayList<String>();
+        if (contentSizeInBytes < 500000) {
+            sentences = generateSentenceList(dataCount, contentSizeInBytes);
+        } else {
+            try {
+                String content = new String(Files.readAllBytes(Paths.get(message500KB)));
+                sentences.add(content);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
 
         HashMap<String, String> email   = new HashMap<String, String>();
         for (int i = 0; i < dataCount; i++) {
             email.put("mail_from", String.format("user%d@email.com", i));
             email.put("mail_to", String.format("user%d@email.com", i + 1));
-            email.put("mail_content", sentences.get(i));
+            if (contentSizeInBytes < 500000)
+                email.put("mail_content", sentences.get(i));
+            else
+                email.put("mail_content", sentences.get(0));
             sqLiteStore.insertData(persistentTable, email);
 
             email.clear();

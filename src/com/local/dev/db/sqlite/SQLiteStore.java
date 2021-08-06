@@ -7,9 +7,6 @@ import java.util.HashMap;
 public class SQLiteStore {
     private File file;
     private String connectionString;
-//    private String message1000b     = "message_1k_bytes.txt";
-//    private String message2000b     = "message_2k_bytes.txt";
-//    private String message500kb     = "message_5k_bytes.txt";
 
     public SQLiteStore(File file) {
         this.file               = file;
