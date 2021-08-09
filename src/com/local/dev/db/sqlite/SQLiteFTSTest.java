@@ -27,9 +27,12 @@ public class SQLiteFTSTest {
     public static void main(String[] args) {
         Instant start = Instant.now();
 
-        dictionary = readDictionary();
-        backupSession(sqliteDb);
+//        dictionary = readDictionary();
+//        backupSession(sqliteDb);
 //        restoreSession(sqliteDb);
+
+        InsertTable insertData = new InsertTable(sqliteDb, 1000);
+        insertData.start();
 
         Instant end = Instant.now();
         timedEvents.put("main", Duration.between(start, end));
@@ -45,7 +48,7 @@ public class SQLiteFTSTest {
             createSQLiteDB(db);
             createTable(db);
             createFTSTable(db);
-            insertTestData(db, 50000, 500000);
+            insertTestData(db, 1000000, 1000);
         } catch (Exception e) {
             e.printStackTrace();
         }
