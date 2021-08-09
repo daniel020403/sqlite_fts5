@@ -1,7 +1,5 @@
 package com.local.dev.db.sqlite;
 
-import sun.rmi.server.InactiveGroupException;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -22,22 +20,22 @@ public class SQLiteFTSTest {
     private static String persistentTable                   = "file";
     private static List<String> dictionary                  = new ArrayList<String>();
     private static HashMap<String, Duration> timedEvents    = new HashMap<String, Duration>();
-    private static String message500KB                      = "message_5k_bytes.txt";
+    private static String message1000B                      = "message_1k_bytes.txt";
+    private static String message500KB                      = "message_500k_bytes.txt";
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         Instant start = Instant.now();
 
 //        dictionary = readDictionary();
 //        backupSession(sqliteDb);
 //        restoreSession(sqliteDb);
 
-        InsertTable insertData = new InsertTable(sqliteDb, 1000);
-        insertData.start();
+        threadInsertData(5, 1000);
 
         Instant end = Instant.now();
         timedEvents.put("main", Duration.between(start, end));
 
-        printTimedEvents();
+//        printTimedEvents();
     }
 
     private static void backupSession(String db) {
@@ -48,7 +46,7 @@ public class SQLiteFTSTest {
             createSQLiteDB(db);
             createTable(db);
             createFTSTable(db);
-            insertTestData(db, 1000000, 1000);
+            insertTestData(db, 1000, 1000);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -132,6 +130,7 @@ public class SQLiteFTSTest {
             }
         }
 
+        System.out.println("Start of data insert operation: " + Instant.now());
         HashMap<String, String> email   = new HashMap<String, String>();
         for (int i = 0; i < dataCount; i++) {
             email.put("mail_from", String.format("user%d@email.com", i));
@@ -145,6 +144,7 @@ public class SQLiteFTSTest {
             email.clear();
         }
         System.out.println("Successfully inserted " + dataCount + " test data!");
+        System.out.println(Instant.now());
 
         Instant end = Instant.now();
         timedEvents.put("insertTestData", Duration.between(start, end));
@@ -196,6 +196,44 @@ public class SQLiteFTSTest {
         for (Map.Entry<String, Duration> set : timedEvents.entrySet()) {
             System.out.println(set.getKey() + ": " + set.getValue().toMillis());
         }
+    }
+
+    private static void threadInsertData(int dataCount, int contentSizeInBytes) throws IOException {
+        Instant start   = Instant.now();
+        String message  = "";
+
+        switch (contentSizeInBytes) {
+            case 1000:
+                message = readDataFromFile(message1000B);
+                break;
+            case 500000:
+                message = readDataFromFile(message500KB);
+                break;
+        }
+
+        for (int i = 0; i < dataCount; i++) {
+            InsertTable thread = new InsertTable("insert" + i, sqliteDb, timedEvents);
+            thread.start(message, i);
+        }
+
+        Instant end = Instant.now();
+        timedEvents.put("threadInsertData", Duration.between(start, end));
+    }
+
+    private static String readDataFromFile(String file) throws IOException {
+        Instant start   = Instant.now();
+        String content  = "";
+
+        try {
+            content = new String(Files.readAllBytes(Paths.get(file)));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Instant end = Instant.now();
+        timedEvents.put("readDataFromFile", Duration.between(start, end));
+
+        return content;
     }
 
 }
