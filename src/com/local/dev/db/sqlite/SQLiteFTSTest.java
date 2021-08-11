@@ -23,7 +23,7 @@ public class SQLiteFTSTest {
     private static String message1000B                      = "message_1k_bytes.txt";
     private static String message500KB                      = "message_500k_bytes.txt";
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         Instant start = Instant.now();
 
 //        dictionary = readDictionary();
@@ -35,7 +35,7 @@ public class SQLiteFTSTest {
         Instant end = Instant.now();
         timedEvents.put("main", Duration.between(start, end));
 
-//        printTimedEvents();
+        printTimedEvents();
     }
 
     private static void backupSession(String db) {
@@ -198,16 +198,25 @@ public class SQLiteFTSTest {
         }
     }
 
-    private static void threadInsertData(int dataCount, int contentSizeInBytes) throws IOException {
+    private static void threadInsertData(int dataCount, int contentSizeInBytes) throws IOException, InterruptedException {
         Instant start   = Instant.now();
 
         InsertTable threadInsert = new InsertTable("insertThread", sqliteDb);
-        threadInsert.start(dataCount, contentSizeInBytes);
 
         IndexData threadIndex = new IndexData("indexThread", sqliteDb);
         threadIndex.setDaemon(true);
-        threadIndex.start();
 
+        threadIndex.start();
+        threadInsert.start(dataCount, contentSizeInBytes);
+
+        while (threadInsert.isAlive() || threadIndex.isAlive()) {
+            try {
+                Thread.sleep(1000);
+                break;
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
         Instant end = Instant.now();
         timedEvents.put("threadInsertData", Duration.between(start, end));
     }

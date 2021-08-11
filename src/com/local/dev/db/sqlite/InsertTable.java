@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.time.Duration;
 import java.time.Instant;
 
 public class InsertTable extends MailIndexer implements Runnable, MailIndexingThread {
@@ -30,7 +31,16 @@ public class InsertTable extends MailIndexer implements Runnable, MailIndexingTh
         this.dataCount          = sampleData;
         this.messageSizeInBytes = contentSizeInBytes;
         this.insertDone         = false;
+        this.insertLast         = false;
         this.thread.start();
+    }
+
+    public void join() throws InterruptedException {
+        this.thread.join();
+    }
+
+    public boolean isAlive() {
+        return this.thread.isAlive();
     }
 
     public void run() {
@@ -51,6 +61,7 @@ public class InsertTable extends MailIndexer implements Runnable, MailIndexingTh
          */
         String message          = getMessageFromFile();
         System.out.println("[" + this.threadName + "] Start of insert operations: " + Instant.now());
+        Instant t1 = Instant.now();
         for (int i = 0; i < this.dataCount; i++) {
             MailData email = new MailData("sender" + i + "@email.com", "recipient" + i + "@email.com", message);
 
@@ -61,9 +72,11 @@ public class InsertTable extends MailIndexer implements Runnable, MailIndexingTh
                 e.printStackTrace();
             } finally {
                 FILE_TABLE_LOCK.release();
+                this.insertDone = true;
             }
         }
-
+        Instant t2 = Instant.now();
+        System.out.println("Insert all data took " + Duration.between(t1, t2).toMillis());
         endProcess();
     }
 
@@ -87,15 +100,15 @@ public class InsertTable extends MailIndexer implements Runnable, MailIndexingTh
     }
 
     private void endProcess() {
-        this.insertDone = true;
-        while (!this.indexDone) {
-            try {
-                Thread.sleep(5000);
-                break;
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
+        this.insertLast = true;
+//        while (!this.indexDone) {
+//            try {
+//                Thread.sleep(5000);
+//                break;
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//        }
     }
 
 }

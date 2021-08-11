@@ -34,14 +34,27 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
         this.thread.start();
     }
 
-    public void run() {
-        while (!this.insertDone) {
-            this.data = retrieveMailDataToIndex();
-            processData();
-            flagIndexedMailData();
-        }
+    public void join() throws InterruptedException {
+        this.thread.join();
+    }
 
-        this.indexDone = true;
+    public boolean isAlive() {
+        return this.thread.isAlive();
+    }
+
+    public void run() {
+        while (true) {
+            if (this.insertDone) {
+                this.data = retrieveMailDataToIndex();
+                processData();
+                flagIndexedMailData();
+                this.insertDone = false;
+                if (this.insertLast) {
+                    this.indexDone = true;
+                    break;
+                }
+            }
+        }
         System.out.println("[" + this.threadName + "] End of thread for index operation: " + Instant.now());
     }
 
