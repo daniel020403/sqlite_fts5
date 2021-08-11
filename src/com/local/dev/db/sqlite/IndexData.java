@@ -35,22 +35,29 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
     }
 
     public void run() {
-        while (!this.insertDone) {
+        do {
             this.data = retrieveMailDataToIndex();
             processData();
             flagIndexedMailData();
-        }
+        } while (!this.data.isEmpty() || !this.indexDone);
+
+//        while (!this.insertDone) {
+//            this.data = retrieveMailDataToIndex();
+//            processData();
+//            flagIndexedMailData();
+//            this.data.clear();
+//        }
 
         this.indexDone = true;
         System.out.println("[" + this.threadName + "] End of thread for index operation: " + Instant.now());
     }
 
     public void processData() {
-//        System.out.println("[" + this.threadName + "] Start of index operations: " + Instant.now());
         for (MailDataToIndex entry : this.data) {
             try (Connection connection = DriverManager.getConnection(this.connectionString)) {
                 FTSMAIL_TABLE_LOCK.acquire();
                 entry.storeData(connection, this.fts5Table);
+                connection.close();
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {

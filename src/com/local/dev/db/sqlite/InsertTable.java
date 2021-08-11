@@ -57,6 +57,7 @@ public class InsertTable extends MailIndexer implements Runnable, MailIndexingTh
             try (Connection connection = DriverManager.getConnection(this.connectionString)) {
                 FILE_TABLE_LOCK.acquire();
                 email.storeData(connection, this.persistentTable);
+                connection.close();
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
@@ -90,8 +91,7 @@ public class InsertTable extends MailIndexer implements Runnable, MailIndexingTh
         this.insertDone = true;
         while (!this.indexDone) {
             try {
-                Thread.sleep(5000);
-                break;
+                Thread.sleep(1000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
