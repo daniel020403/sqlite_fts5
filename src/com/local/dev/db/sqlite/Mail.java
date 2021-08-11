@@ -1,6 +1,8 @@
 package com.local.dev.db.sqlite;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 public abstract class Mail {
 
@@ -26,4 +28,15 @@ public abstract class Mail {
         return this.message;
     }
 
+    public static void clearTable(Connection datastoreConnection, String table) {
+        try {
+            if (datastoreConnection != null) {
+                String sql = "DELETE FROM " + table + ";";
+                PreparedStatement pstatement = datastoreConnection.prepareStatement(sql);
+                pstatement.executeUpdate();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 }

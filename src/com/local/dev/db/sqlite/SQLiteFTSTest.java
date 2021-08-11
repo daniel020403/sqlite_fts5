@@ -23,6 +23,36 @@ public class SQLiteFTSTest {
     private static String message1000B                      = "message_1k_bytes.txt";
     private static String message500KB                      = "message_500k_bytes.txt";
 
+    public static class Flags {
+        protected volatile boolean insertDone;
+        protected volatile boolean indexDone;
+        protected volatile boolean insertLast;
+
+        public boolean isInsertDone() {
+            return insertDone;
+        }
+
+        public void setInsertDone(boolean insertDone) {
+            this.insertDone = insertDone;
+        }
+
+        public boolean isIndexDone() {
+            return indexDone;
+        }
+
+        public void setIndexDone(boolean indexDone) {
+            this.indexDone = indexDone;
+        }
+
+        public boolean isInsertLast() {
+            return insertLast;
+        }
+
+        public void setInsertLast(boolean insertLast) {
+            this.insertLast = insertLast;
+        }
+    }
+
     public static void main(String[] args) throws IOException, InterruptedException {
         Instant start = Instant.now();
 
@@ -30,7 +60,7 @@ public class SQLiteFTSTest {
 //        backupSession(sqliteDb);
 //        restoreSession(sqliteDb);
 
-        threadInsertData(1000, 1000);
+        threadInsertData(5, 1000);
 
         Instant end = Instant.now();
         timedEvents.put("main", Duration.between(start, end));
@@ -201,9 +231,11 @@ public class SQLiteFTSTest {
     private static void threadInsertData(int dataCount, int contentSizeInBytes) throws IOException, InterruptedException {
         Instant start   = Instant.now();
 
-        InsertTable threadInsert = new InsertTable("insertThread", sqliteDb);
+        Flags flags = new Flags();
+        InsertTable threadInsert = new InsertTable(flags, "insertThread", sqliteDb);
+        threadInsert.clearTable();
 
-        IndexData threadIndex = new IndexData("indexThread", sqliteDb);
+        IndexData threadIndex = new IndexData(flags, "indexThread", sqliteDb);
         threadIndex.setDaemon(true);
 
         threadIndex.start();

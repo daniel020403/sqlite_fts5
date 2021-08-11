@@ -19,8 +19,9 @@ public class InsertTable extends MailIndexer implements Runnable, MailIndexingTh
 
     private String persistentTable      = "file";
 
-    public InsertTable(String name, String db) {
+    public InsertTable(SQLiteFTSTest.Flags flags, String name, String db) {
         System.out.println("[" + name + "] Start of thread for insert operation: " + Instant.now());
+        this.flags = flags;
         this.thread             = new Thread(this);
         this.threadName         = name;
         this.dbFile             = db;
@@ -30,8 +31,8 @@ public class InsertTable extends MailIndexer implements Runnable, MailIndexingTh
     public void start(int sampleData, int contentSizeInBytes) {
         this.dataCount          = sampleData;
         this.messageSizeInBytes = contentSizeInBytes;
-        this.insertDone         = false;
-        this.insertLast         = false;
+        flags.setInsertDone(false);
+        flags.setInsertLast(false);
         this.thread.start();
     }
 
@@ -46,6 +47,18 @@ public class InsertTable extends MailIndexer implements Runnable, MailIndexingTh
     public void run() {
         processData();
         System.out.println("[" + this.threadName + "] End of thread for insert operations: " + Instant.now());
+    }
+
+    public void clearTable() {
+        try (Connection connection = DriverManager.getConnection(this.connectionString)) {
+            FILE_TABLE_LOCK.acquire();
+            Mail.clearTable(connection, this.persistentTable);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            FILE_TABLE_LOCK.release();
+            flags.setInsertDone(true);
+        }
     }
 
     public void processData() {
@@ -72,7 +85,7 @@ public class InsertTable extends MailIndexer implements Runnable, MailIndexingTh
                 e.printStackTrace();
             } finally {
                 FILE_TABLE_LOCK.release();
-                this.insertDone = true;
+                flags.setInsertDone(true);
             }
         }
         Instant t2 = Instant.now();
@@ -100,7 +113,7 @@ public class InsertTable extends MailIndexer implements Runnable, MailIndexingTh
     }
 
     private void endProcess() {
-        this.insertLast = true;
+        flags.setInsertLast(true);
 //        while (!this.indexDone) {
 //            try {
 //                Thread.sleep(5000);
