@@ -2,11 +2,14 @@ package com.local.dev.db.sqlite;
 
 import java.io.File;
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public class SQLiteStore {
     private File file;
     private String connectionString;
+
+    private String ftsTable     = "ftsMail";
 
     public SQLiteStore(File file) {
         this.file               = file;
@@ -84,6 +87,38 @@ public class SQLiteStore {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    public ArrayList<MailDataToIndex> getMailDataToIndex(String table) {
+        ArrayList<MailDataToIndex> dataset  = new ArrayList<>();
+        String sql                          = "SELECT id, mail_from, mail_to, mail_content, mail_indexed FROM " + table + " WHERE mail_indexed = 0;";
+
+        try (Connection conn = DriverManager.getConnection(this.connectionString)) {
+            if (conn != null) {
+                Statement statement = conn.createStatement();
+                ResultSet resultSet = statement.executeQuery(sql);
+
+                while (resultSet.next()) {
+                    MailDataToIndex data = new MailDataToIndex(
+                            resultSet.getLong("id"),
+                            resultSet.getString("mail_from"),
+                            resultSet.getString("mail_to"),
+                            resultSet.getString("mail_content"),
+                            resultSet.getInt("mail_indexed")
+                    );
+
+                    dataset.add(data);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return dataset;
+    }
+
+    public void updateMailIndexed(MailDataToIndex data) {
+
     }
 
     public void queryFTSTable(String table) {

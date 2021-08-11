@@ -30,7 +30,7 @@ public class SQLiteFTSTest {
 //        backupSession(sqliteDb);
 //        restoreSession(sqliteDb);
 
-        threadInsertData(5, 1000);
+        threadInsertData(1000, 1000);
 
         Instant end = Instant.now();
         timedEvents.put("main", Duration.between(start, end));
@@ -200,21 +200,13 @@ public class SQLiteFTSTest {
 
     private static void threadInsertData(int dataCount, int contentSizeInBytes) throws IOException {
         Instant start   = Instant.now();
-        String message  = "";
 
-        switch (contentSizeInBytes) {
-            case 1000:
-                message = readDataFromFile(message1000B);
-                break;
-            case 500000:
-                message = readDataFromFile(message500KB);
-                break;
-        }
+        InsertTable threadInsert = new InsertTable("insertThread", sqliteDb);
+        threadInsert.start(dataCount, contentSizeInBytes);
 
-        for (int i = 0; i < dataCount; i++) {
-            InsertTable thread = new InsertTable("insert" + i, sqliteDb, timedEvents);
-            thread.start(message, i);
-        }
+        IndexData threadIndex = new IndexData("indexThread", sqliteDb);
+        threadIndex.setDaemon(true);
+        threadIndex.start();
 
         Instant end = Instant.now();
         timedEvents.put("threadInsertData", Duration.between(start, end));

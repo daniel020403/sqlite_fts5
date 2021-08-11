@@ -1,97 +1,101 @@
 package com.local.dev.db.sqlite;
 
-import java.io.File;
-import java.time.Duration;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.Semaphore;
 
-public class InsertTable implements Runnable {
-
-    private Semaphore mutex = new Semaphore(1);
+public class InsertTable extends MailIndexer implements Runnable, MailIndexingThread {
 
     private Thread thread;
     private String threadName;
     private String dbFile;
-    private String ftsTable                                  = "ftsMail";
-    private String persistentTable                           = "file";
-    private long samplePtr;
-    private String content;
-    private HashMap<String, Duration> threadTimedEvents;
+    private String connectionString;
+    private int dataCount;
+    private int messageSizeInBytes;
 
-    public InsertTable(String name, String db, HashMap<String, Duration> timedEvents) {
-//        System.out.println("Instantiating " + name + " ...\n");
-        System.out.println("Start of insert operation: " + Instant.now());
+    private String persistentTable      = "file";
+
+    public InsertTable(String name, String db) {
+        System.out.println("[" + name + "] Start of thread for insert operation: " + Instant.now());
         this.thread             = new Thread(this);
         this.threadName         = name;
         this.dbFile             = db;
-        this.threadTimedEvents  = new HashMap<>();
+        this.connectionString   = "jdbc:sqlite:" + this.dbFile;
     }
 
-    public void start(String content, long ptr) {
-//        System.out.println("Starting " + this.threadName + " ...\n");
-        this.content    = content;
-        this.samplePtr  = ptr;
+    public void start(int sampleData, int contentSizeInBytes) {
+        this.dataCount          = sampleData;
+        this.messageSizeInBytes = contentSizeInBytes;
+        this.insertDone         = false;
         this.thread.start();
     }
 
     public void run() {
-//        System.out.println("Running " + this.threadName + " ...\n");
-//        Instant start = Instant.now();
-        insertTestData();
-        indexData();
-//        Instant end = Instant.now();
-//        threadTimedEvents.put(threadName + ".runNanos", Duration.between(start, end));
-
-//        System.out.println("Stopping " + this.threadName + " ...\n");
-
-//        printThreadTimedEvents();
+        processData();
+        System.out.println("[" + this.threadName + "] End of thread for insert operations: " + Instant.now());
     }
 
-    private void insertTestData() {
-//        Instant start                   = Instant.now();
-        SQLiteStore sqLiteStore         = new SQLiteStore(new File(dbFile));
+    public void processData() {
+        /***
+         * Retrieval of mail data is still subject to changes
+         * depending  on the knowledge that is acquired upon
+         * tracing backup process.
+         *
+         * data assumptions:
+         * - sender     > sender<i>@email.com
+         * - recipient  > recipient<i>@email.com
+         * - message    > message
+         */
+        String message          = getMessageFromFile();
+        System.out.println("[" + this.threadName + "] Start of insert operations: " + Instant.now());
+        for (int i = 0; i < this.dataCount; i++) {
+            MailData email = new MailData("sender" + i + "@email.com", "recipient" + i + "@email.com", message);
 
-        HashMap<String, String> email   = new HashMap<>();
-        email.put("mail_from", String.format("user%d@email.com", this.samplePtr));
-        email.put("mail_to", String.format("user%d@email.com", this.samplePtr + 1));
-        email.put("mail_content", this.content);
-        sqLiteStore.insertData(persistentTable, email);
+            try (Connection connection = DriverManager.getConnection(this.connectionString)) {
+                FILE_TABLE_LOCK.acquire();
+                email.storeData(connection, this.persistentTable);
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                FILE_TABLE_LOCK.release();
+            }
+        }
 
-//        Instant end = Instant.now();
-//        threadTimedEvents.put(threadName + ".insertDataNanos", Duration.between(start, end));
+        endProcess();
     }
 
-    private void indexData() {
+    private String getMessageFromFile() {
+        String message = "";
+
         try {
-            mutex.acquire();
-            IndexData thread = new IndexData(this.threadName + ".index", this.dbFile);
-            thread.start();
-        } catch (Exception e) {
+            switch (this.messageSizeInBytes) {
+                case 1000:
+                    message = new String(Files.readAllBytes(Paths.get("message_1k_bytes.txt")));
+                    break;
+                case 500000:
+                    message = new String(Files.readAllBytes(Paths.get("message_500k_bytes.txt")));
+                    break;
+            }
+        } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            mutex.release();
         }
+
+        return message;
     }
 
-    private void printThreadTimedEvents() {
-//        long readMessageFileTotalNanos  = 0;
-//        long insertDataTotalNanos       = 0;
-
-        System.out.println("\n\n----- " + this.threadName + " Summary of Thread Timed Events (milliseconds) -----\n");
-        for (Map.Entry<String, Duration> set : threadTimedEvents.entrySet()) {
-//            if (set.getKey().contains("readMessageFile")) {
-//                readMessageFileTotalNanos += set.getValue().toNanos();
-//            } else if (set.getKey().contains("insertData")) {
-//                insertDataTotalNanos += set.getValue().toNanos();
-//            } else {
-                System.out.println(set.getKey() + ": " + set.getValue().toMillis());
-//            }
+    private void endProcess() {
+        this.insertDone = true;
+        while (!this.indexDone) {
+            try {
+                Thread.sleep(5000);
+                break;
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
-
-//        System.out.println("readMessageFileTotalNanos: " + readMessageFileTotalNanos);
-//        System.out.println("insertDataTotalNanos: " + insertDataTotalNanos);
     }
 
 }
