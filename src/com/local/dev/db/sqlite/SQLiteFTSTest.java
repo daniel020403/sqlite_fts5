@@ -60,12 +60,12 @@ public class SQLiteFTSTest {
 //        backupSession(sqliteDb);
 //        restoreSession(sqliteDb);
 
-        threadInsertData(5, 1000);
+        threadInsertData(1000, 1000);
 
         Instant end = Instant.now();
         timedEvents.put("main", Duration.between(start, end));
 
-        printTimedEvents();
+//        printTimedEvents();
     }
 
     private static void backupSession(String db) {
@@ -243,12 +243,13 @@ public class SQLiteFTSTest {
 
         while (threadInsert.isAlive() || threadIndex.isAlive()) {
             try {
-                Thread.sleep(1000);
-                break;
+                System.out.println("Waiting for threads to end...");
+                Thread.sleep(5000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
+        Thread.sleep(1000);
         Instant end = Instant.now();
         timedEvents.put("threadInsertData", Duration.between(start, end));
     }

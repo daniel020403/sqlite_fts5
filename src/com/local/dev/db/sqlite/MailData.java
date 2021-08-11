@@ -14,7 +14,7 @@ public class MailData extends Mail {
 
     @Override
     public void storeData(Connection datastoreConnection, String table) {
-        Instant t1 = Instant.now();
+//        Instant t1 = Instant.now();
         try {
             if (datastoreConnection != null) {
                 String sql = "INSERT INTO " + table + "(backup_in_job, parent_id, name, backup_by_job, mail_from, mail_to, mail_content) " +
@@ -29,8 +29,8 @@ public class MailData extends Mail {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            Instant t2 = Instant.now();
-            System.out.println("Insert data took " + Duration.between(t1, t2).toMillis());
+//            Instant t2 = Instant.now();
+//            System.out.println("Insert data took " + Duration.between(t1, t2).toMillis());
         }
     }
 }
