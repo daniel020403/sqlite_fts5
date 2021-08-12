@@ -235,6 +235,7 @@ public class SQLiteFTSTest {
 
         Flags flags = new Flags();
         Connection connection = DriverManager.getConnection("jdbc:sqlite:" + sqliteDb);
+
         InsertTable threadInsert = new InsertTable(flags, "insertThread", connection);
 //        threadInsert.clearTable();
 

@@ -3,6 +3,8 @@ package com.local.dev.db.sqlite;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -64,16 +66,23 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
 
     public void processData() {
 //        System.out.println("[" + this.threadName + "] Start of index processData: " + Instant.now() + " [" + this.data.size() + "]");
-        for (MailDataToIndex entry : this.data) {
-            try {
-//                FTSMAIL_TABLE_LOCK.acquire();
-                entry.storeData(this.connection, this.fts5Table);
-//                System.out.println("[" + this.threadName + "] Doing index processData: " + Instant.now());
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-//                FTSMAIL_TABLE_LOCK.release();
+        try {
+            if (this.connection != null) {
+                String sql = "INSERT INTO " + this.fts5Table + "(rowid, mail_from, mail_to, mail_content) VALUES(?, ?, ?, ?);";
+                PreparedStatement pstatement = this.connection.prepareStatement(sql);
+
+                for (MailDataToIndex entry : this.data) {
+                    pstatement.setLong(1, entry.getMailId());
+                    pstatement.setString(2, entry.getSender());
+                    pstatement.setString(3, entry.getRecipient());
+                    pstatement.setString(4, entry.getMessage());
+                    pstatement.addBatch();
+                }
+
+                pstatement.executeBatch();
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
 //        System.out.println("[" + this.threadName + "] End of index processData: " + Instant.now());
     }

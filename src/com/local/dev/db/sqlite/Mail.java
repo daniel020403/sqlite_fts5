@@ -16,8 +16,6 @@ public abstract class Mail {
         this.message = message;
     }
 
-    public abstract void storeData(Connection datastoreConnection, String table);
-
     public String getSender() {
         return this.sender;
     }

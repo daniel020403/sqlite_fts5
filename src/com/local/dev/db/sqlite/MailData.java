@@ -12,7 +12,6 @@ public class MailData extends Mail {
         super(sender, recipient, message);
     }
 
-    @Override
     public void storeData(Connection datastoreConnection, String table) {
 //        Instant t1 = Instant.now();
         try {
