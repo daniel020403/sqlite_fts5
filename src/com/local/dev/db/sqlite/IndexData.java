@@ -103,16 +103,21 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
 
     private void flagIndexedMailData() {
 //        System.out.println("[" + this.threadName + "] Start of index flagIndexedMailData: " + Instant.now());
-        for (MailDataToIndex entry : this.data) {
-            try {
-//                FILE_TABLE_LOCK.acquire();
-                entry.setMailIndexed(1);
-                entry.updateData(this.connection, this.persistentTable);
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-//                FILE_TABLE_LOCK.release();
+        try {
+            if (this.connection != null) {
+                String sql = "UPDATE " + this.persistentTable + " SET mail_indexed = ? WHERE id = ?";
+                PreparedStatement pstatement = this.connection.prepareStatement(sql);
+
+                for (MailDataToIndex entry : this.data) {
+                    pstatement.setInt(1, 1);
+                    pstatement.setLong(2, entry.getMailId());
+                    pstatement.addBatch();
+                }
+
+                pstatement.executeBatch();
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
 //        System.out.println("[" + this.threadName + "] End of index flagIndexedMailData: " + Instant.now());
     }

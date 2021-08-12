@@ -1,7 +1,5 @@
 package com.local.dev.db.sqlite;
 
-import java.sql.*;
-
 public class MailDataToIndex extends Mail {
 
     private long mailId;
@@ -11,21 +9,6 @@ public class MailDataToIndex extends Mail {
         super(sender, recipient, message);
         this.mailId         = id;
         this.mailIndexed    = indexed;
-    }
-
-    public void updateData(Connection datastoreConnection, String table) {
-        try {
-            if (datastoreConnection != null) {
-                String sql = "UPDATE " + table + " SET mail_indexed = ? WHERE id = ?";
-
-                PreparedStatement pstatement = datastoreConnection.prepareStatement(sql);
-                pstatement.setInt(1, this.mailIndexed);
-                pstatement.setLong(2, this.mailId);
-                pstatement.executeUpdate();
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
     }
 
     public long getMailId() { return this.mailId; }
