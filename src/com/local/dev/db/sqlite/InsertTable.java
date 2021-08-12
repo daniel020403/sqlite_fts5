@@ -78,6 +78,7 @@ public class InsertTable extends MailIndexer implements Runnable, MailIndexingTh
             try {
 //                FILE_TABLE_LOCK.acquire();
                 email.storeData(this.connection, this.persistentTable);
+                this.connection.commit();
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {

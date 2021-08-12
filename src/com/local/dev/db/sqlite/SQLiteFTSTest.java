@@ -62,7 +62,7 @@ public class SQLiteFTSTest {
 //        backupSession(sqliteDb);
 //        restoreSession(sqliteDb);
 
-        threadInsertData(100000, 1000);
+        threadInsertData(1000, 1000);
 
         Instant end = Instant.now();
         timedEvents.put("main", Duration.between(start, end));
@@ -235,6 +235,7 @@ public class SQLiteFTSTest {
 
         Flags flags = new Flags();
         Connection connection = DriverManager.getConnection("jdbc:sqlite:" + sqliteDb);
+        connection.setAutoCommit(false);
 
         InsertTable threadInsert = new InsertTable(flags, "insertThread", connection);
 //        threadInsert.clearTable();

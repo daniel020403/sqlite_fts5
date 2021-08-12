@@ -80,6 +80,7 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
                 }
 
                 pstatement.executeBatch();
+                this.connection.commit();
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -115,6 +116,7 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
                 }
 
                 pstatement.executeBatch();
+                this.connection.commit();
             }
         } catch (SQLException e) {
             e.printStackTrace();
