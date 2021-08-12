@@ -12,20 +12,17 @@ public class InsertTable extends MailIndexer implements Runnable, MailIndexingTh
 
     private Thread thread;
     private String threadName;
-    private String dbFile;
-    private String connectionString;
     private int dataCount;
     private int messageSizeInBytes;
 
     private String persistentTable      = "file";
 
-    public InsertTable(SQLiteFTSTest.Flags flags, String name, String db) {
+    public InsertTable(SQLiteFTSTest.Flags flags, String name, Connection conn) {
         System.out.println("[" + name + "] Start of thread for insert operation: " + Instant.now());
         this.flags = flags;
         this.thread             = new Thread(this);
         this.threadName         = name;
-        this.dbFile             = db;
-        this.connectionString   = "jdbc:sqlite:" + this.dbFile;
+        this.connection         = conn;
     }
 
     public void start(int sampleData, int contentSizeInBytes) {
@@ -49,17 +46,17 @@ public class InsertTable extends MailIndexer implements Runnable, MailIndexingTh
         System.out.println("[" + this.threadName + "] End of thread for insert operations: " + Instant.now());
     }
 
-    public void clearTable() {
-        try (Connection connection = DriverManager.getConnection(this.connectionString)) {
-            FILE_TABLE_LOCK.acquire();
-            Mail.clearTable(connection, this.persistentTable);
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            FILE_TABLE_LOCK.release();
-            flags.setInsertDone(true);
-        }
-    }
+//    public void clearTable() {
+//        try (Connection connection = DriverManager.getConnection(this.connectionString)) {
+////            FILE_TABLE_LOCK.acquire();
+//            Mail.clearTable(connection, this.persistentTable);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        } finally {
+////            FILE_TABLE_LOCK.release();
+//            flags.setInsertDone(true);
+//        }
+//    }
 
     public void processData() {
         /***
@@ -78,13 +75,13 @@ public class InsertTable extends MailIndexer implements Runnable, MailIndexingTh
         for (int i = 0; i < this.dataCount; i++) {
             MailData email = new MailData("sender" + i + "@email.com", "recipient" + i + "@email.com", message);
 
-            try (Connection connection = DriverManager.getConnection(this.connectionString)) {
-                FILE_TABLE_LOCK.acquire();
-                email.storeData(connection, this.persistentTable);
+            try {
+//                FILE_TABLE_LOCK.acquire();
+                email.storeData(this.connection, this.persistentTable);
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
-                FILE_TABLE_LOCK.release();
+//                FILE_TABLE_LOCK.release();
                 flags.setInsertDone(true);
             }
         }

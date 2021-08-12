@@ -89,11 +89,11 @@ public class SQLiteStore {
         }
     }
 
-    public ArrayList<MailDataToIndex> getMailDataToIndex(String table) {
+    public ArrayList<MailDataToIndex> getMailDataToIndex(Connection conn, String table) {
         ArrayList<MailDataToIndex> dataset  = new ArrayList<>();
         String sql                          = "SELECT id, mail_from, mail_to, mail_content, mail_indexed FROM " + table + " WHERE mail_indexed = 0;";
 
-        try (Connection conn = DriverManager.getConnection(this.connectionString)) {
+        try {
             if (conn != null) {
                 Statement statement = conn.createStatement();
                 ResultSet resultSet = statement.executeQuery(sql);

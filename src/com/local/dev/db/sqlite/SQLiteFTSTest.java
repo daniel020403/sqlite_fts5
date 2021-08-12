@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
@@ -53,19 +55,19 @@ public class SQLiteFTSTest {
         }
     }
 
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args) throws IOException, InterruptedException, SQLException {
         Instant start = Instant.now();
 
 //        dictionary = readDictionary();
 //        backupSession(sqliteDb);
 //        restoreSession(sqliteDb);
 
-        threadInsertData(1000, 1000);
+        threadInsertData(100000, 1000);
 
         Instant end = Instant.now();
         timedEvents.put("main", Duration.between(start, end));
 
-//        printTimedEvents();
+        printTimedEvents();
     }
 
     private static void backupSession(String db) {
@@ -228,28 +230,29 @@ public class SQLiteFTSTest {
         }
     }
 
-    private static void threadInsertData(int dataCount, int contentSizeInBytes) throws IOException, InterruptedException {
+    private static void threadInsertData(int dataCount, int contentSizeInBytes) throws IOException, InterruptedException, SQLException {
         Instant start   = Instant.now();
 
         Flags flags = new Flags();
-        InsertTable threadInsert = new InsertTable(flags, "insertThread", sqliteDb);
-        threadInsert.clearTable();
+        Connection connection = DriverManager.getConnection("jdbc:sqlite:" + sqliteDb);
+        InsertTable threadInsert = new InsertTable(flags, "insertThread", connection);
+//        threadInsert.clearTable();
 
-        IndexData threadIndex = new IndexData(flags, "indexThread", sqliteDb);
-        threadIndex.setDaemon(true);
+        IndexData threadIndex = new IndexData(flags, "indexThread", connection);
+//        threadIndex.setDaemon(true);
 
         threadIndex.start();
         threadInsert.start(dataCount, contentSizeInBytes);
 
         while (threadInsert.isAlive() || threadIndex.isAlive()) {
-            try {
-                System.out.println("Waiting for threads to end...");
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+//            try {
+//                System.out.println("Waiting for threads to end...");
+//                Thread.sleep(5000);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
         }
-        Thread.sleep(1000);
+//        Thread.sleep(1000);
         Instant end = Instant.now();
         timedEvents.put("threadInsertData", Duration.between(start, end));
     }

@@ -11,8 +11,6 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
 
     private Thread thread;
     private String threadName;
-    private String dbFile;
-    private String connectionString;
     private ArrayList<MailDataToIndex> data;
 
     private String persistentTable  = "file";
@@ -20,13 +18,12 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
     private Instant t1;
     private Instant t2;
 
-    public IndexData(SQLiteFTSTest.Flags flags, String name, String db) {
+    public IndexData(SQLiteFTSTest.Flags flags, String name, Connection conn) {
         System.out.println("[" + name + "] Start of thread for index operation: " + Instant.now());
         this.flags = flags;
         this.thread             = new Thread(this);
         this.threadName         = name;
-        this.dbFile             = db;
-        this.connectionString   = "jdbc:sqlite:" + this.dbFile;
+        this.connection         = conn;
     }
 
     public void setDaemon(boolean value) {
@@ -68,14 +65,14 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
     public void processData() {
 //        System.out.println("[" + this.threadName + "] Start of index processData: " + Instant.now() + " [" + this.data.size() + "]");
         for (MailDataToIndex entry : this.data) {
-            try (Connection connection = DriverManager.getConnection(this.connectionString)) {
-                FTSMAIL_TABLE_LOCK.acquire();
-                entry.storeData(connection, this.fts5Table);
+            try {
+//                FTSMAIL_TABLE_LOCK.acquire();
+                entry.storeData(this.connection, this.fts5Table);
 //                System.out.println("[" + this.threadName + "] Doing index processData: " + Instant.now());
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
-                FTSMAIL_TABLE_LOCK.release();
+//                FTSMAIL_TABLE_LOCK.release();
             }
         }
 //        System.out.println("[" + this.threadName + "] End of index processData: " + Instant.now());
@@ -84,12 +81,12 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
     private ArrayList<MailDataToIndex> retrieveMailDataToIndex() {
         ArrayList<MailDataToIndex> dataset = new ArrayList<>();
         try {
-            FILE_TABLE_LOCK.acquire();
-            dataset     = (new SQLiteStore(new File(this.dbFile))).getMailDataToIndex(this.persistentTable);
+//            FILE_TABLE_LOCK.acquire();
+            dataset     = (new SQLiteStore(new File("index.db"))).getMailDataToIndex(this.connection, this.persistentTable);
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            FILE_TABLE_LOCK.release();
+//            FILE_TABLE_LOCK.release();
         }
 
         return dataset;
@@ -98,14 +95,14 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
     private void flagIndexedMailData() {
 //        System.out.println("[" + this.threadName + "] Start of index flagIndexedMailData: " + Instant.now());
         for (MailDataToIndex entry : this.data) {
-            try (Connection connection = DriverManager.getConnection(this.connectionString)) {
-                FILE_TABLE_LOCK.acquire();
+            try {
+//                FILE_TABLE_LOCK.acquire();
                 entry.setMailIndexed(1);
-                entry.updateData(connection, this.persistentTable);
+                entry.updateData(this.connection, this.persistentTable);
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
-                FILE_TABLE_LOCK.release();
+//                FILE_TABLE_LOCK.release();
             }
         }
 //        System.out.println("[" + this.threadName + "] End of index flagIndexedMailData: " + Instant.now());
