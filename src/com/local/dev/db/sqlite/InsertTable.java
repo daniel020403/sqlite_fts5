@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -81,6 +82,8 @@ public class InsertTable extends MailIndexer implements Runnable, MailIndexingTh
                 this.connection.commit();
             } catch (Exception e) {
                 e.printStackTrace();
+                try { this.connection.rollback(); }
+                catch (SQLException err) { err.printStackTrace(); }
             } finally {
 //                FILE_TABLE_LOCK.release();
                 flags.setInsertDone(true);

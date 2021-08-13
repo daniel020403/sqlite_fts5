@@ -84,6 +84,8 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
             }
         } catch (SQLException e) {
             e.printStackTrace();
+            try { this.connection.rollback(); }
+            catch (SQLException err) { err.printStackTrace(); }
         }
 //        System.out.println("[" + this.threadName + "] End of index processData: " + Instant.now());
     }
@@ -120,6 +122,8 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
             }
         } catch (SQLException e) {
             e.printStackTrace();
+            try { this.connection.rollback(); }
+            catch (SQLException err) { err.printStackTrace(); }
         }
 //        System.out.println("[" + this.threadName + "] End of index flagIndexedMailData: " + Instant.now());
     }
