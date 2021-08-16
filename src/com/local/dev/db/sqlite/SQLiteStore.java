@@ -89,9 +89,9 @@ public class SQLiteStore {
         }
     }
 
-    public ArrayList<MailDataToIndex> getMailDataToIndex(Connection conn, String table) {
-        ArrayList<MailDataToIndex> dataset  = new ArrayList<>();
-        String sql                          = "SELECT id, mail_from, mail_to, mail_content, mail_indexed FROM " + table + " WHERE mail_indexed = 0;";
+    public ArrayList<FileState> getMailDataToIndex(Connection conn, String table) {
+        ArrayList<FileState> dataset  = new ArrayList<>();
+        String sql                          = "SELECT id, state, file_id FROM " + table + " WHERE state <> 0 AND state <> 3";
 
         try {
             if (conn != null) {
@@ -99,12 +99,10 @@ public class SQLiteStore {
                 ResultSet resultSet = statement.executeQuery(sql);
 
                 while (resultSet.next()) {
-                    MailDataToIndex data = new MailDataToIndex(
+                    FileState data = new FileState(
                             resultSet.getLong("id"),
-                            resultSet.getString("mail_from"),
-                            resultSet.getString("mail_to"),
-                            resultSet.getString("mail_content"),
-                            resultSet.getInt("mail_indexed")
+                            resultSet.getInt("state"),
+                            resultSet.getLong("file_id")
                     );
 
                     dataset.add(data);
@@ -117,7 +115,7 @@ public class SQLiteStore {
         return dataset;
     }
 
-    public void updateMailIndexed(MailDataToIndex data) {
+    public void updateMailIndexed(FileState data) {
 
     }
 

@@ -2,8 +2,8 @@ package com.local.dev.db.sqlite;
 
 import java.io.File;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
@@ -13,9 +13,10 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
 
     private Thread thread;
     private String threadName;
-    private ArrayList<MailDataToIndex> data;
+    private ArrayList<FileState> data;
 
-    private String persistentTable  = "file";
+    private String fileTable        = "file";
+    private String fileStateTable   = "file_state";
     private String fts5Table        = "ftsMail";
     private Instant t1;
     private Instant t2;
@@ -54,6 +55,9 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
                 flagIndexedMailData();
                 flags.setInsertDone(false);
                 if (flags.isInsertLast()) {
+                    this.data = retrieveMailDataToIndex();
+                    processData();
+                    flagIndexedMailData();
                     flags.setIndexDone(true);
                     t2 = Instant.now();
                     break;
@@ -68,18 +72,26 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
 //        System.out.println("[" + this.threadName + "] Start of index processData: " + Instant.now() + " [" + this.data.size() + "]");
         try {
             if (this.connection != null) {
-                String sql = "INSERT INTO " + this.fts5Table + "(rowid, mail_from, mail_to, mail_content) VALUES(?, ?, ?, ?);";
-                PreparedStatement pstatement = this.connection.prepareStatement(sql);
+                String mailSql  = "SELECT id, mail_from, mail_to, mail_content from " + this.fileTable + " WHERE id = ?;";
+                PreparedStatement retrieveStatement = this.connection.prepareStatement(mailSql);
 
-                for (MailDataToIndex entry : this.data) {
-                    pstatement.setLong(1, entry.getMailId());
-                    pstatement.setString(2, entry.getSender());
-                    pstatement.setString(3, entry.getRecipient());
-                    pstatement.setString(4, entry.getMessage());
-                    pstatement.addBatch();
+                String sql = "INSERT INTO " + this.fts5Table + "(rowid, mail_from, mail_to, mail_content) VALUES(?, ?, ?, ?);";
+                PreparedStatement insertStatement = this.connection.prepareStatement(sql);
+
+                for (FileState entry : this.data) {
+                    retrieveStatement.setLong(1, entry.getFileId());
+                    ResultSet mailDataSet = retrieveStatement.executeQuery();
+
+                    if (mailDataSet.next()) {
+                        insertStatement.setLong(1, mailDataSet.getLong("id"));
+                        insertStatement.setString(2, mailDataSet.getString("mail_from"));
+                        insertStatement.setString(3, mailDataSet.getString("mail_to"));
+                        insertStatement.setString(4, mailDataSet.getString("mail_content"));
+                        insertStatement.addBatch();
+                    }
                 }
 
-                pstatement.executeBatch();
+                insertStatement.executeBatch();
                 this.connection.commit();
             }
         } catch (SQLException e) {
@@ -90,11 +102,11 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
 //        System.out.println("[" + this.threadName + "] End of index processData: " + Instant.now());
     }
 
-    private ArrayList<MailDataToIndex> retrieveMailDataToIndex() {
-        ArrayList<MailDataToIndex> dataset = new ArrayList<>();
+    private ArrayList<FileState> retrieveMailDataToIndex() {
+        ArrayList<FileState> dataset = new ArrayList<>();
         try {
 //            FILE_TABLE_LOCK.acquire();
-            dataset     = (new SQLiteStore(new File("index.db"))).getMailDataToIndex(this.connection, this.persistentTable);
+            dataset     = (new SQLiteStore(new File("index.db"))).getMailDataToIndex(this.connection, this.fileStateTable);
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -108,12 +120,12 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
 //        System.out.println("[" + this.threadName + "] Start of index flagIndexedMailData: " + Instant.now());
         try {
             if (this.connection != null) {
-                String sql = "UPDATE " + this.persistentTable + " SET mail_indexed = ? WHERE id = ?";
+                String sql = "UPDATE " + this.fileStateTable + " SET state = ? WHERE id = ?";
                 PreparedStatement pstatement = this.connection.prepareStatement(sql);
 
-                for (MailDataToIndex entry : this.data) {
-                    pstatement.setInt(1, 1);
-                    pstatement.setLong(2, entry.getMailId());
+                for (FileState entry : this.data) {
+                    pstatement.setInt(1, 0);
+                    pstatement.setLong(2, entry.getStateId());
                     pstatement.addBatch();
                 }
 
