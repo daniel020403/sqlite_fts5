@@ -100,7 +100,7 @@ public class InsertTable extends MailIndexer implements Runnable, MailIndexingTh
         try {
             switch (this.messageSizeInBytes) {
                 case 1000:
-                    message = new String(Files.readAllBytes(Paths.get("message_1k_bytes.txt")));
+                    message = new String(Files.readAllBytes(Paths.get("message_1k_bytes_proper_words.txt")));
                     break;
                 case 500000:
                     message = new String(Files.readAllBytes(Paths.get("message_500k_bytes.txt")));

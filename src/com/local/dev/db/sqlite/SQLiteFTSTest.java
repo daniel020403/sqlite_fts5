@@ -22,7 +22,8 @@ public class SQLiteFTSTest {
     private static String persistentTable                   = "file";
     private static List<String> dictionary                  = new ArrayList<String>();
     private static HashMap<String, Duration> timedEvents    = new HashMap<String, Duration>();
-    private static String message1000B                      = "message_1k_bytes.txt";
+//    private static String message1000B                      = "message_1k_bytes.txt";
+    private static String message1000B                      = "message_1k_bytes_proper_words.txt";
     private static String message500KB                      = "message_500k_bytes.txt";
 
     public static class Flags {
@@ -254,6 +255,8 @@ public class SQLiteFTSTest {
 //                e.printStackTrace();
 //            }
         }
+
+        connection.close();
 //        Thread.sleep(1000);
         Instant end = Instant.now();
         timedEvents.put("threadInsertData", Duration.between(start, end));
