@@ -63,7 +63,7 @@ public class SQLiteFTSTest {
 //        backupSession(sqliteDb);
 //        restoreSession(sqliteDb);
 
-        threadInsertData(1000000, 1000);
+        threadInsertData(10, 1000);
 
         Instant end = Instant.now();
         timedEvents.put("main", Duration.between(start, end));

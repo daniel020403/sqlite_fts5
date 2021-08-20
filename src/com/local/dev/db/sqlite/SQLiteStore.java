@@ -89,9 +89,57 @@ public class SQLiteStore {
         }
     }
 
+    public ArrayList<MailDataState> getMailThatNeedsStateUpdate(Connection conn, String table) {
+        ArrayList<MailDataState> dataset    = new ArrayList<>();
+        String sql                          = "SELECT id, mail_from, mail_to, mail_context FROM " + table + " WHERE state_need_update = 1;";
+
+        try {
+            if (conn != null) {
+                Statement statement = conn.createStatement();
+                ResultSet resultSet = statement.executeQuery(sql);
+
+                while (resultSet.next()) {
+                    MailDataState state = new MailDataState(
+                            resultSet.getLong("id"),
+                            resultSet.getString("mail_from"),
+                            resultSet.getString("mail_to"),
+                            resultSet.getString("mail_content"),
+                            resultSet.getInt("state_need_update")
+                    );
+
+                    dataset.add(state);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return dataset;
+    }
+
+    public void insertFileState(Connection conn, String table, ArrayList<MailDataState> dataset) {
+        try {
+            if (conn != null) {
+                String sql              = "INSERT INTO " + table + "(state, file_id) VALUES(?, ?);";
+                PreparedStatement pStmt = conn.prepareStatement(sql);
+
+                for (MailDataState entry : dataset) {
+                    pStmt.setLong(1, entry.getFileId());
+                    pStmt.setInt(2, 1);
+                    pStmt.addBatch();
+                }
+
+                pStmt.executeBatch();
+                conn.commit();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
     public ArrayList<FileState> getMailDataToIndex(Connection conn, String table) {
         ArrayList<FileState> dataset  = new ArrayList<>();
-        String sql                          = "SELECT id, state, file_id FROM " + table + " WHERE state <> 0 AND state <> 3";
+        String sql                          = "SELECT id, state, file_id FROM " + table + " WHERE state <> 0 AND state <> 4";
 
         try {
             if (conn != null) {

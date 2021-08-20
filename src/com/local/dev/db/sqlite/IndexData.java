@@ -50,11 +50,13 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
         while (true) {
             if (flags.isInsertDone()) {
                 if (t1 == null) t1 = Instant.now();
+                updateFileState();
                 this.data = retrieveMailDataToIndex();
                 processData();
                 flagIndexedMailData();
                 flags.setInsertDone(false);
                 if (flags.isInsertLast()) {
+                    updateFileState();
                     this.data = retrieveMailDataToIndex();
                     processData();
                     flagIndexedMailData();
@@ -100,6 +102,23 @@ public class IndexData extends MailIndexer implements Runnable, MailIndexingThre
             catch (SQLException err) { err.printStackTrace(); }
         }
 //        System.out.println("[" + this.threadName + "] End of index processData: " + Instant.now());
+    }
+
+    private void updateFileState() {
+        try {
+            ArrayList<MailDataState> needStateUpdateDS = (new SQLiteStore(new File("index.db"))).getMailThatNeedsStateUpdate(this.connection, this.fileTable);
+            insertFileState(needStateUpdateDS);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void insertFileState(ArrayList<MailDataState> dataset) {
+        try {
+            (new SQLiteStore(new File("index.db"))).insertFileState(this.connection, this.fileStateTable, dataset);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private ArrayList<FileState> retrieveMailDataToIndex() {
