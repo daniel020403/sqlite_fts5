@@ -1,5 +1,6 @@
 package com.local.dev.db.sqlite;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -7,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
@@ -63,7 +65,8 @@ public class SQLiteFTSTest {
 //        backupSession(sqliteDb);
 //        restoreSession(sqliteDb);
 
-        threadInsertData(10, 1000);
+//        threadInsertData(10000, 1000);
+        fts5ContentlessTableInputStreamTest();
 
         Instant end = Instant.now();
         timedEvents.put("main", Duration.between(start, end));
@@ -276,6 +279,61 @@ public class SQLiteFTSTest {
         timedEvents.put("readDataFromFile", Duration.between(start, end));
 
         return content;
+    }
+
+    private static void fts5ContentlessTableInputStreamTest() {
+        try {
+            Connection connection = DriverManager.getConnection("jdbc:sqlite:" + sqliteDb);
+            connection.setAutoCommit(false);
+
+            fileTableInsert(connection);
+            fts5ContentlessTableInsert(connection);
+
+            connection.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void fileTableInsert(Connection connection) {
+        try {
+            if (connection != null) {
+                String sql                          = "INSERT INTO file(backup_in_job, parent_id, name, backup_by_job, mail_from, mail_to, mail_content) " +
+                                                    "VALUES(20210630154250, 1, '$JOB_ATTRIBUTES', 20210630154250, ?, ?, ?);";
+                PreparedStatement preparedStatement = connection.prepareStatement(sql);
+
+                preparedStatement.setString(1, "sender@email.com");
+                preparedStatement.setString(2, "recipient@email.com");
+                preparedStatement.setString(3, "Far far away, behind the word mountains");
+                preparedStatement.execute();
+
+                connection.commit();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void fts5ContentlessTableInsert(Connection connection) {
+        try {
+            if (connection != null) {
+                String sql                          = "INSERT INTO ftsMail(rowid, mail_from, mail_to, mail_content) VALUES(?, ?, ?, ?);";
+                PreparedStatement preparedStatement = connection.prepareStatement(sql);
+                String fileContent                  = new String(Files.readAllBytes(Paths.get("message_1k_bytes_proper_words.txt")));
+
+                preparedStatement.setInt(1, 2);
+                preparedStatement.setString(2, "sender@email.com");
+                preparedStatement.setString(3, "recipient@email.com");
+
+                ByteArrayInputStream inputStream    = new ByteArrayInputStream(fileContent.getBytes());
+                preparedStatement.setAsciiStream(4, inputStream, fileContent.getBytes().length);
+
+                preparedStatement.executeUpdate();
+                connection.commit();
+            }
+        } catch (SQLException | IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }
