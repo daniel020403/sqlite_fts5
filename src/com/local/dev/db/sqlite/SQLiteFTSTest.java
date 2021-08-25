@@ -321,7 +321,7 @@ public class SQLiteFTSTest {
                 PreparedStatement preparedStatement = connection.prepareStatement(sql);
                 String fileContent                  = new String(Files.readAllBytes(Paths.get("message_1k_bytes_proper_words.txt")));
 
-                preparedStatement.setInt(1, 2);
+                preparedStatement.setInt(1, 1);
                 preparedStatement.setString(2, "sender@email.com");
                 preparedStatement.setString(3, "recipient@email.com");
 
